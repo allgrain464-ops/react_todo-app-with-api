@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Todo } from '../types/Todo';
 
 type Props = {
   todo: Todo;
   isProcessed: boolean;
-  onDelete?: () => void;
+  onDelete: () => void;
   onToggle: () => void;
+  onUpdate: (todoId: number, title: string) => void;
 };
 
 export const TodoItem: React.FC<Props> = ({
@@ -13,34 +14,142 @@ export const TodoItem: React.FC<Props> = ({
   isProcessed,
   onDelete,
   onToggle,
+  onUpdate,
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(todo.title);
+
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const isFinishingRef = useRef(false);
+
+  useEffect(() => {
+    if (isEditing) {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+      isFinishingRef.current = false;
+    }
+  }, [isEditing]);
+
+  const startEditing = () => {
+    if (isProcessed) {
+      return;
+    }
+
+    setEditTitle(todo.title);
+    setIsEditing(true);
+  };
+
+  const handleEditChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setEditTitle(event.target.value);
+  };
+
+  const cancelEdit = () => {
+    if (isFinishingRef.current) {
+      return;
+    }
+
+    isFinishingRef.current = true;
+    setEditTitle(todo.title);
+    setIsEditing(false);
+  };
+
+  const saveEdit = () => {
+    if (isFinishingRef.current) {
+      return;
+    }
+
+    isFinishingRef.current = true;
+
+    const trimmedTitle = editTitle.trim();
+
+    if (!trimmedTitle) {
+      setIsEditing(false);
+      onDelete();
+
+      return;
+    }
+
+    if (trimmedTitle === todo.title) {
+      setIsEditing(false);
+
+      return;
+    }
+
+    setIsEditing(false);
+    onUpdate(todo.id, trimmedTitle);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    saveEdit();
+  };
+
+  const handleKeyUp = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      cancelEdit();
+    }
+  };
+
+  const handleBlur = () => {
+    saveEdit();
+  };
+
   return (
-    <div data-cy="Todo" className={`todo ${todo.completed ? 'completed' : ''}`}>
-      <div className="todo__status-label">
-        <input
-          data-cy="TodoStatus"
-          type="checkbox"
-          className="todo__status"
-          checked={todo.completed}
-          onChange={onToggle}
-          disabled={isProcessed}
-          aria-label={`Mark "${todo.title}" as completed`}
-        />
-      </div>
+    <div
+      data-cy="Todo"
+      className={`todo ${todo.completed ? 'completed' : ''}`}
+    >
+      {!isEditing && (
+        <div className="todo__status-label">
+          <input
+            data-cy="TodoStatus"
+            type="checkbox"
+            className="todo__status"
+            checked={todo.completed}
+            onChange={onToggle}
+            disabled={isProcessed}
+            aria-label={`Mark "${todo.title}" as completed`}
+          />
+        </div>
+      )}
 
-      <span data-cy="TodoTitle" className="todo__title">
-        {todo.title}
-      </span>
+      {isEditing ? (
+        <form className="todo__edit" onSubmit={handleSubmit}>
+          <input
+            ref={editInputRef}
+            data-cy="TodoTitleField"
+            type="text"
+            className="todo__title-field"
+            value={editTitle}
+            onChange={handleEditChange}
+            onBlur={handleBlur}
+            onKeyUp={handleKeyUp}
+          />
+        </form>
+      ) : (
+        <>
+          <span
+            data-cy="TodoTitle"
+            className="todo__title"
+            onDoubleClick={startEditing}
+          >
+            {todo.title}
+          </span>
 
-      <button
-        type="button"
-        className="todo__remove"
-        data-cy="TodoDelete"
-        onClick={onDelete}
-        disabled={isProcessed}
-      >
-        ×
-      </button>
+          <button
+            type="button"
+            className="todo__remove"
+            data-cy="TodoDelete"
+            onClick={onDelete}
+            disabled={isProcessed}
+          >
+            ×
+          </button>
+        </>
+      )}
 
       <div
         data-cy="TodoLoader"

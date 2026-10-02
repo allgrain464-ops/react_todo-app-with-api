@@ -171,34 +171,102 @@ export const App: React.FC = () => {
       });
   };
 
+  const handleUpdateTodo = (todoId: number, newTitle: string) => {
+    const todo = todos.find(currentTodo => currentTodo.id === todoId);
+
+    if (!todo) {
+      return;
+    }
+
+    setUpdatingTodoIds(currentIds => [...currentIds, todoId]);
+
+    updateTodo(todoId, todo.completed, newTitle)
+      .then(updatedTodo => {
+        setTodos(currentTodos =>
+          currentTodos.map(currentTodo =>
+            currentTodo.id === todoId ? updatedTodo : currentTodo,
+          ),
+        );
+      })
+      .catch(() => {
+        setErrorMessage('Unable to update a todo');
+      })
+      .finally(() => {
+        setUpdatingTodoIds(currentIds =>
+          currentIds.filter(id => id !== todoId),
+        );
+
+        inputRef.current?.focus();
+      });
+  };
+
+  const handleToggleAll = () => {
+    const shouldCompleteAll = todos.some(todo => !todo.completed);
+
+    const todosToUpdate = todos.filter(
+      todo => todo.completed !== shouldCompleteAll,
+    );
+
+    setUpdatingTodoIds(todosToUpdate.map(todo => todo.id));
+
+    Promise.allSettled(
+      todosToUpdate.map(todo => updateTodo(todo.id, shouldCompleteAll)),
+    ).then(results => {
+      const successfulTodos = todosToUpdate.filter(
+        (_todo, index) => results[index].status === 'fulfilled',
+      );
+
+      if (successfulTodos.length > 0) {
+        setTodos(currentTodos =>
+          currentTodos.map(todo => {
+            const updatedTodo = successfulTodos.find(
+              item => item.id === todo.id,
+            );
+
+            return updatedTodo
+              ? { ...todo, completed: shouldCompleteAll }
+              : todo;
+          }),
+        );
+      }
+
+      if (results.some(result => result.status === 'rejected')) {
+        setErrorMessage('Unable to update a todo');
+      }
+
+      setUpdatingTodoIds([]);
+      inputRef.current?.focus();
+    });
+  };
+
   const handleClearCompleted = () => {
     const completedTodos = todos.filter(todo => todo.completed);
     const completedIds = completedTodos.map(todo => todo.id);
 
     setDeletingTodoIds(completedIds);
 
-    Promise.allSettled(completedTodos.map(todo => deleteTodo(todo.id))).then(
-      results => {
-        const successfullyDeletedIds = completedIds.filter(
-          (_id, index) => results[index].status === 'fulfilled',
+    Promise.allSettled(
+      completedTodos.map(todo => deleteTodo(todo.id)),
+    ).then(results => {
+      const successfullyDeletedIds = completedIds.filter(
+        (_id, index) => results[index].status === 'fulfilled',
+      );
+
+      if (successfullyDeletedIds.length > 0) {
+        setTodos(currentTodos =>
+          currentTodos.filter(
+            todo => !successfullyDeletedIds.includes(todo.id),
+          ),
         );
+      }
 
-        if (successfullyDeletedIds.length > 0) {
-          setTodos(currentTodos =>
-            currentTodos.filter(
-              todo => !successfullyDeletedIds.includes(todo.id),
-            ),
-          );
-        }
+      if (results.some(result => result.status === 'rejected')) {
+        setErrorMessage('Unable to delete a todo');
+      }
 
-        if (results.some(result => result.status === 'rejected')) {
-          setErrorMessage('Unable to delete a todo');
-        }
-
-        setDeletingTodoIds([]);
-        inputRef.current?.focus();
-      },
-    );
+      setDeletingTodoIds([]);
+      inputRef.current?.focus();
+    });
   };
 
   return (
@@ -214,6 +282,7 @@ export const App: React.FC = () => {
                 todos.every(todo => todo.completed) ? 'active' : ''
               }`}
               data-cy="ToggleAllButton"
+              onClick={handleToggleAll}
             />
           )}
 
@@ -240,6 +309,7 @@ export const App: React.FC = () => {
             updatingTodoIds={updatingTodoIds}
             onDelete={handleDeleteTodo}
             onToggle={handleToggleTodo}
+            onUpdate={handleUpdateTodo}
           />
         )}
 

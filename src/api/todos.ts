@@ -9,6 +9,11 @@ type NewTodo = {
   completed: boolean;
 };
 
+type UpdateTodo = {
+  completed: boolean;
+  title?: string;
+};
+
 export const getTodos = (): Promise<Todo[]> => {
   return client.get<Todo[]>(`/todos?userId=${USER_ID}`);
 };
@@ -28,8 +33,15 @@ export const deleteTodo = (todoId: number): Promise<Todo> => {
 export const updateTodo = (
   todoId: number,
   completed: boolean,
+  title?: string,
 ): Promise<Todo> => {
-  return client.patch<Todo, { completed: boolean }>(`/todos/${todoId}`, {
+  const data: UpdateTodo = {
     completed,
-  });
+  };
+
+  if (title !== undefined) {
+    data.title = title;
+  }
+
+  return client.patch<Todo, UpdateTodo>(`/todos/${todoId}`, data);
 };

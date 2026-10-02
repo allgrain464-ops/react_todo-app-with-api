@@ -10,6 +10,7 @@ type Props = {
   updatingTodoIds: number[];
   onDelete: (todoId: number) => void;
   onToggle: (todo: Todo) => void;
+  onUpdate: (todoId: number, title: string) => void;
 };
 
 export const TodoList: React.FC<Props> = ({
@@ -20,6 +21,7 @@ export const TodoList: React.FC<Props> = ({
   updatingTodoIds,
   onDelete,
   onToggle,
+  onUpdate,
 }) => {
   if (isLoading) {
     return (
@@ -41,10 +43,19 @@ export const TodoList: React.FC<Props> = ({
           }
           onDelete={() => onDelete(todo.id)}
           onToggle={() => onToggle(todo)}
+          onUpdate={onUpdate}
         />
       ))}
 
-      {tempTodo && <TodoItem todo={tempTodo} isProcessed onToggle={() => {}} />}
+      {tempTodo && (
+        <TodoItem
+          todo={tempTodo}
+          isProcessed
+          onDelete={() => {}}
+          onToggle={() => {}}
+          onUpdate={() => {}}
+        />
+      )}
     </section>
   );
 };
