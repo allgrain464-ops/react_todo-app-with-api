@@ -20,15 +20,28 @@ export const TodoItem: React.FC<Props> = ({
   const [editTitle, setEditTitle] = useState(todo.title);
 
   const editInputRef = useRef<HTMLInputElement>(null);
-  const isFinishingRef = useRef(false);
+  const submittedTitleRef = useRef<string | null>(null);
+  const finishingRef = useRef(false);
 
   useEffect(() => {
     if (isEditing) {
       editInputRef.current?.focus();
       editInputRef.current?.select();
-      isFinishingRef.current = false;
     }
   }, [isEditing]);
+
+  // API update succeeded: todo.title changed from the server.
+  useEffect(() => {
+    if (
+      isEditing &&
+      submittedTitleRef.current !== null &&
+      todo.title === submittedTitleRef.current
+    ) {
+      submittedTitleRef.current = null;
+      finishingRef.current = false;
+      setIsEditing(false);
+    }
+  }, [todo.title, isEditing]);
 
   const startEditing = () => {
     if (isProcessed) {
@@ -36,6 +49,8 @@ export const TodoItem: React.FC<Props> = ({
     }
 
     setEditTitle(todo.title);
+    submittedTitleRef.current = null;
+    finishingRef.current = false;
     setIsEditing(true);
   };
 
@@ -44,37 +59,43 @@ export const TodoItem: React.FC<Props> = ({
   };
 
   const saveEdit = () => {
-    if (isFinishingRef.current) {
+    if (finishingRef.current) {
       return;
     }
 
-    isFinishingRef.current = true;
-
     const trimmedTitle = editTitle.trim();
 
+    // Empty title = delete todo.
     if (!trimmedTitle) {
+      finishingRef.current = true;
       setIsEditing(false);
       onDelete?.();
 
       return;
     }
 
+    // Same title = cancel editing, no API request.
     if (trimmedTitle === todo.title) {
+      finishingRef.current = true;
       setIsEditing(false);
 
       return;
     }
 
-    setIsEditing(false);
+    // Keep the form open while the API request is pending.
+    finishingRef.current = true;
+    submittedTitleRef.current = trimmedTitle;
+
     onUpdate(todo.id, trimmedTitle);
   };
 
   const cancelEdit = () => {
-    if (isFinishingRef.current) {
+    if (isProcessed) {
       return;
     }
 
-    isFinishingRef.current = true;
+    submittedTitleRef.current = null;
+    finishingRef.current = false;
     setEditTitle(todo.title);
     setIsEditing(false);
   };
@@ -86,6 +107,7 @@ export const TodoItem: React.FC<Props> = ({
 
   const handleEditKeyUp = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
+      event.preventDefault();
       cancelEdit();
     }
   };
@@ -119,6 +141,7 @@ export const TodoItem: React.FC<Props> = ({
             onChange={handleEditChange}
             onBlur={handleEditBlur}
             onKeyUp={handleEditKeyUp}
+            disabled={isProcessed}
           />
         </form>
       ) : (
