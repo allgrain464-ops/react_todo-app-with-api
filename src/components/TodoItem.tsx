@@ -4,7 +4,7 @@ import { Todo } from '../types/Todo';
 type Props = {
   todo: Todo;
   isProcessed: boolean;
-  onDelete: () => void;
+  onDelete?: () => void;
   onToggle: () => void;
   onUpdate: (todoId: number, title: string) => void;
 };
@@ -39,20 +39,8 @@ export const TodoItem: React.FC<Props> = ({
     setIsEditing(true);
   };
 
-  const handleEditChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const handleEditChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setEditTitle(event.target.value);
-  };
-
-  const cancelEdit = () => {
-    if (isFinishingRef.current) {
-      return;
-    }
-
-    isFinishingRef.current = true;
-    setEditTitle(todo.title);
-    setIsEditing(false);
   };
 
   const saveEdit = () => {
@@ -66,7 +54,7 @@ export const TodoItem: React.FC<Props> = ({
 
     if (!trimmedTitle) {
       setIsEditing(false);
-      onDelete();
+      onDelete?.();
 
       return;
     }
@@ -81,43 +69,47 @@ export const TodoItem: React.FC<Props> = ({
     onUpdate(todo.id, trimmedTitle);
   };
 
+  const cancelEdit = () => {
+    if (isFinishingRef.current) {
+      return;
+    }
+
+    isFinishingRef.current = true;
+    setEditTitle(todo.title);
+    setIsEditing(false);
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     saveEdit();
   };
 
-  const handleKeyUp = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleEditKeyUp = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
-      event.preventDefault();
       cancelEdit();
     }
   };
 
-  const handleBlur = () => {
+  const handleEditBlur = () => {
     saveEdit();
   };
 
   return (
-    <div
-      data-cy="Todo"
-      className={`todo ${todo.completed ? 'completed' : ''}`}
-    >
-      {!isEditing && (
-        <div className="todo__status-label">
-          <input
-            data-cy="TodoStatus"
-            type="checkbox"
-            className="todo__status"
-            checked={todo.completed}
-            onChange={onToggle}
-            disabled={isProcessed}
-            aria-label={`Mark "${todo.title}" as completed`}
-          />
-        </div>
-      )}
+    <div data-cy="Todo" className={`todo ${todo.completed ? 'completed' : ''}`}>
+      <div className="todo__status-label">
+        <input
+          data-cy="TodoStatus"
+          type="checkbox"
+          className="todo__status"
+          checked={todo.completed}
+          onChange={onToggle}
+          disabled={isProcessed || isEditing}
+          aria-label={`Mark "${todo.title}" as completed`}
+        />
+      </div>
 
       {isEditing ? (
-        <form className="todo__edit" onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           <input
             ref={editInputRef}
             data-cy="TodoTitleField"
@@ -125,30 +117,30 @@ export const TodoItem: React.FC<Props> = ({
             className="todo__title-field"
             value={editTitle}
             onChange={handleEditChange}
-            onBlur={handleBlur}
-            onKeyUp={handleKeyUp}
+            onBlur={handleEditBlur}
+            onKeyUp={handleEditKeyUp}
           />
         </form>
       ) : (
-        <>
-          <span
-            data-cy="TodoTitle"
-            className="todo__title"
-            onDoubleClick={startEditing}
-          >
-            {todo.title}
-          </span>
+        <span
+          data-cy="TodoTitle"
+          className="todo__title"
+          onDoubleClick={startEditing}
+        >
+          {todo.title}
+        </span>
+      )}
 
-          <button
-            type="button"
-            className="todo__remove"
-            data-cy="TodoDelete"
-            onClick={onDelete}
-            disabled={isProcessed}
-          >
-            ×
-          </button>
-        </>
+      {!isEditing && (
+        <button
+          type="button"
+          className="todo__remove"
+          data-cy="TodoDelete"
+          onClick={onDelete}
+          disabled={isProcessed}
+        >
+          ×
+        </button>
       )}
 
       <div

@@ -245,28 +245,28 @@ export const App: React.FC = () => {
 
     setDeletingTodoIds(completedIds);
 
-    Promise.allSettled(
-      completedTodos.map(todo => deleteTodo(todo.id)),
-    ).then(results => {
-      const successfullyDeletedIds = completedIds.filter(
-        (_id, index) => results[index].status === 'fulfilled',
-      );
-
-      if (successfullyDeletedIds.length > 0) {
-        setTodos(currentTodos =>
-          currentTodos.filter(
-            todo => !successfullyDeletedIds.includes(todo.id),
-          ),
+    Promise.allSettled(completedTodos.map(todo => deleteTodo(todo.id))).then(
+      results => {
+        const successfullyDeletedIds = completedIds.filter(
+          (_id, index) => results[index].status === 'fulfilled',
         );
-      }
 
-      if (results.some(result => result.status === 'rejected')) {
-        setErrorMessage('Unable to delete a todo');
-      }
+        if (successfullyDeletedIds.length > 0) {
+          setTodos(currentTodos =>
+            currentTodos.filter(
+              todo => !successfullyDeletedIds.includes(todo.id),
+            ),
+          );
+        }
 
-      setDeletingTodoIds([]);
-      inputRef.current?.focus();
-    });
+        if (results.some(result => result.status === 'rejected')) {
+          setErrorMessage('Unable to delete a todo');
+        }
+
+        setDeletingTodoIds([]);
+        inputRef.current?.focus();
+      },
+    );
   };
 
   return (
