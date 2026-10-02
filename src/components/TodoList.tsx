@@ -8,7 +8,7 @@ type Props = {
   tempTodo: Todo | null;
   deletingTodoIds: number[];
   updatingTodoIds: number[];
-  onDelete: (todoId: number) => void;
+  onDelete: (todoId: number) => Promise<boolean>;
   onToggle: (todo: Todo) => void;
   onUpdate: (todoId: number, title: string) => void;
 };
@@ -51,7 +51,7 @@ export const TodoList: React.FC<Props> = ({
         <TodoItem
           todo={tempTodo}
           isProcessed
-          onDelete={() => {}}
+          onDelete={() => Promise.resolve(false)}
           onToggle={() => {}}
           onUpdate={() => {}}
         />

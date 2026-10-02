@@ -4,7 +4,7 @@ import { Todo } from '../types/Todo';
 type Props = {
   todo: Todo;
   isProcessed: boolean;
-  onDelete?: () => void;
+  onDelete?: () => Promise<boolean>;
   onToggle: () => void;
   onUpdate: (todoId: number, title: string) => void;
 };
@@ -30,7 +30,6 @@ export const TodoItem: React.FC<Props> = ({
     }
   }, [isEditing]);
 
-  // API update succeeded: todo.title changed from the server.
   useEffect(() => {
     if (
       isEditing &&
@@ -68,8 +67,15 @@ export const TodoItem: React.FC<Props> = ({
     // Empty title = delete todo.
     if (!trimmedTitle) {
       finishingRef.current = true;
-      setIsEditing(false);
-      onDelete?.();
+
+      onDelete?.().then(success => {
+        if (success) {
+          setIsEditing(false);
+        } else {
+          finishingRef.current = false;
+          editInputRef.current?.focus();
+        }
+      });
 
       return;
     }
