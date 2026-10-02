@@ -210,7 +210,9 @@ export const App: React.FC = () => {
           {!isLoading && todos.length > 0 && (
             <button
               type="button"
-              className="todoapp__toggle-all active"
+              className={`todoapp__toggle-all ${
+                todos.every(todo => todo.completed) ? 'active' : ''
+              }`}
               data-cy="ToggleAllButton"
             />
           )}
