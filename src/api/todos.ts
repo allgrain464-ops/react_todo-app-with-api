@@ -8,7 +8,7 @@ export const getTodos = () => {
 };
 
 export const addTodo = (title: string) => {
-  return client.post<Todo>('/todos', {
+  return client.post<Todo, unknown>('/todos', {
     userId: USER_ID,
     title,
     completed: false,
@@ -16,12 +16,9 @@ export const addTodo = (title: string) => {
 };
 
 export const deleteTodo = (todoId: number) => {
-  return client.delete(`/todos/${todoId}`);
+  return client.delete<unknown>(`/todos/${todoId}`);
 };
 
-export const updateTodo = (
-  todoId: number,
-  data: Partial<Pick<Todo, 'title' | 'completed'>>,
-) => {
-  return client.patch<Todo>(`/todos/${todoId}`, data);
+export const updateTodo = (todoId: number, data: Partial<Todo>) => {
+  return client.patch<Todo, unknown>(`/todos/${todoId}`, data);
 };

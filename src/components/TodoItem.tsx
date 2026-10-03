@@ -1,12 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { FormEvent, useEffect, useRef, useState } from 'react';
+import classNames from 'classnames';
 import { Todo } from '../types/Todo';
 
 type Props = {
   todo: Todo;
   isProcessed: boolean;
-  onDelete?: (todoId: number) => void;
-  onToggle: () => void;
-  onUpdate: (todo: Todo, title: string) => Promise<boolean>;
+  onDelete: (todoId: number) => Promise<boolean>;
+  onToggle: (todo: Todo) => void;
+  onUpdate: (
+    todoId: number,
+    data: Partial<Pick<Todo, 'title' | 'completed'>>,
+  ) => Promise<boolean>;
 };
 
 export const TodoItem: React.FC<Props> = ({
@@ -20,6 +24,7 @@ export const TodoItem: React.FC<Props> = ({
   const [title, setTitle] = useState(todo.title);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     if (isEditing) {
@@ -28,8 +33,10 @@ export const TodoItem: React.FC<Props> = ({
   }, [isEditing]);
 
   useEffect(() => {
-    setTitle(todo.title);
-  }, [todo.title]);
+    if (!isEditing) {
+      setTitle(todo.title);
+    }
+  }, [todo.title, isEditing]);
 
   const startEditing = () => {
     if (isProcessed) {
@@ -41,121 +48,142 @@ export const TodoItem: React.FC<Props> = ({
   };
 
   const cancelEditing = () => {
+    if (savingRef.current) {
+      return;
+    }
+
     setTitle(todo.title);
     setIsEditing(false);
   };
 
   const saveTitle = async () => {
+    if (savingRef.current) {
+      return;
+    }
+
     const newTitle = title.trim();
 
-    if (!newTitle) {
-      if (onDelete) {
-        onDelete(todo.id);
+    if (newTitle === todo.title) {
+      setTitle(todo.title);
+      setIsEditing(false);
+
+      return;
+    }
+
+    if (newTitle === '') {
+      savingRef.current = true;
+
+      const success = await onDelete(todo.id);
+
+      savingRef.current = false;
+
+      if (success) {
+        setIsEditing(false);
       }
 
       return;
     }
 
-    if (newTitle === todo.title) {
-      setIsEditing(false);
+    savingRef.current = true;
 
-      return;
-    }
+    const success = await onUpdate(todo.id, {
+      title: newTitle,
+    });
 
-    const success = await onUpdate(todo, newTitle);
+    savingRef.current = false;
 
     if (success) {
+      setTitle(newTitle);
       setIsEditing(false);
     }
   };
 
-  const handleKeyDown = async (
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (event.key === 'Enter') {
-      await saveTitle();
-    }
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
 
+    void saveTitle();
+  };
+
+  const handleKeyUp = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Escape') {
       cancelEditing();
     }
   };
 
-  if (isEditing) {
-    return (
-      <div className="todo">
-        <div className="todo__status-label">
-          <input
-            type="checkbox"
-            className="todo__status"
-            checked={todo.completed}
-            onChange={onToggle}
-            disabled
-          />
-        </div>
+  const handleBlur = () => {
+    void saveTitle();
+  };
 
-        <form
-          onSubmit={event => {
-            event.preventDefault();
-            void saveTitle();
-          }}
-          className="todo__form"
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            className="todo__title-field"
-            value={title}
-            onChange={event => setTitle(event.target.value)}
-            onBlur={() => {
-              void saveTitle();
-            }}
-            onKeyDown={handleKeyDown}
-            disabled={isProcessed}
-            data-cy="TodoTitleField"
-          />
-        </form>
-      </div>
-    );
-  }
+  const checkboxId = `todo-status-${todo.id}`;
 
   return (
-    <div className={`todo ${todo.completed ? 'completed' : ''}`} data-cy="Todo">
-      <div className="todo__status-label">
-        <input
-          type="checkbox"
-          className="todo__status"
-          checked={todo.completed}
-          onChange={onToggle}
-          disabled={isProcessed}
-          data-cy="TodoStatus"
-        />
-      </div>
+    <li
+      className={classNames('todo', {
+        completed: todo.completed,
+        editing: isEditing,
+      })}
+      data-cy="Todo"
+    >
+      {!isEditing && (
+        <div className="view">
+          <input
+            id={checkboxId}
+            data-cy="TodoStatus"
+            className="todo__status"
+            type="checkbox"
+            checked={todo.completed}
+            onChange={() => onToggle(todo)}
+            disabled={isProcessed}
+            aria-label="Toggle todo status"
+          />
 
-      <span
-        className="todo__title"
-        onDoubleClick={startEditing}
-        data-cy="TodoTitle"
-      >
-        {todo.title}
-      </span>
+          <span
+            data-cy="TodoTitle"
+            className="todo__title"
+            onDoubleClick={startEditing}
+          >
+            {todo.title}
+          </span>
 
-      <button
-        type="button"
-        className="todo__remove"
-        onClick={() => onDelete?.(todo.id)}
-        disabled={isProcessed}
-        data-cy="TodoDelete"
-      >
-        ×
-      </button>
-
-      {isProcessed && (
-        <div className="modal overlay" data-cy="TodoLoader">
-          <div className="modal-background has-background-white-ter" />
-          <div className="loader" />
+          <button
+            type="button"
+            className="todo__remove"
+            data-cy="TodoDelete"
+            onClick={() => {
+              void onDelete(todo.id);
+            }}
+            disabled={isProcessed}
+          >
+            ×
+          </button>
         </div>
       )}
-    </div>
+
+      {isEditing && (
+        <form onSubmit={handleSubmit}>
+          <input
+            ref={inputRef}
+            data-cy="TodoTitleField"
+            className="todo__edit"
+            type="text"
+            value={title}
+            onChange={event => setTitle(event.target.value)}
+            onBlur={handleBlur}
+            onKeyUp={handleKeyUp}
+            disabled={isProcessed}
+          />
+        </form>
+      )}
+
+      <div
+        data-cy="TodoLoader"
+        className={classNames('modal', 'overlay', {
+          'is-active': isProcessed,
+        })}
+      >
+        <div className="modal-background" />
+        <div className="loader" />
+      </div>
+    </li>
   );
 };
