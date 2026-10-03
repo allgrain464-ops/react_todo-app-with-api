@@ -1,5 +1,6 @@
 import React from 'react';
 import { Todo } from '../types/Todo';
+import { TodoChanges } from '../api/todos';
 import { TodoItem } from './TodoItem';
 
 type Props = {
@@ -9,11 +10,7 @@ type Props = {
   deletingTodoIds: number[];
   updatingTodoIds: number[];
   onDelete: (todoId: number) => Promise<boolean>;
-  onToggle: (todo: Todo) => void;
-  onUpdate: (
-    todoId: number,
-    data: Partial<Pick<Todo, 'title' | 'completed'>>,
-  ) => Promise<boolean>;
+  onUpdate: (todoId: number, changes: TodoChanges) => Promise<boolean>;
 };
 
 export const TodoList: React.FC<Props> = ({
@@ -23,29 +20,27 @@ export const TodoList: React.FC<Props> = ({
   deletingTodoIds,
   updatingTodoIds,
   onDelete,
-  onToggle,
   onUpdate,
 }) => {
   if (isLoading) {
     return (
-      <section className="todoapp__main" data-cy="TodoList">
-        <div className="loader" />
+      <section className="todoapp__main">
+        <div data-cy="Loader" className="loader" />
       </section>
     );
   }
 
   return (
-    <section className="todoapp__main" data-cy="TodoList">
+    <section className="todoapp__main">
       {todos.map(todo => (
         <TodoItem
           key={todo.id}
           todo={todo}
-          isProcessed={
+          isLoading={
             deletingTodoIds.includes(todo.id) ||
             updatingTodoIds.includes(todo.id)
           }
           onDelete={onDelete}
-          onToggle={onToggle}
           onUpdate={onUpdate}
         />
       ))}
@@ -53,10 +48,9 @@ export const TodoList: React.FC<Props> = ({
       {tempTodo && (
         <TodoItem
           todo={tempTodo}
-          isProcessed
-          onDelete={onDelete}
-          onToggle={onToggle}
-          onUpdate={onUpdate}
+          isLoading
+          onDelete={() => Promise.resolve(false)}
+          onUpdate={() => Promise.resolve(false)}
         />
       )}
     </section>
