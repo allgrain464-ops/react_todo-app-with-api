@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { UserWarning } from './UserWarning';
 import {
   USER_ID,
@@ -27,7 +27,7 @@ export const App: React.FC = () => {
   const newTodoField = useRef<HTMLInputElement>(null);
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const showError = (message: string) => {
+  const showError = useCallback((message: string) => {
     setErrorMessage(message);
 
     if (errorTimerRef.current) {
@@ -38,7 +38,7 @@ export const App: React.FC = () => {
       setErrorMessage('');
       errorTimerRef.current = null;
     }, 3000);
-  };
+  }, []);
 
   const handleHideError = () => {
     setErrorMessage('');
@@ -49,7 +49,7 @@ export const App: React.FC = () => {
     }
   };
 
-  const loadTodos = async () => {
+  const loadTodos = useCallback(async () => {
     try {
       const loadedTodos = await getTodos();
 
@@ -59,7 +59,7 @@ export const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showError]);
 
   useEffect(() => {
     void loadTodos();
@@ -69,7 +69,7 @@ export const App: React.FC = () => {
         clearTimeout(errorTimerRef.current);
       }
     };
-  }, []);
+  }, [loadTodos]);
 
   const handleAddTodo = async (title: string): Promise<boolean> => {
     const trimmedTitle = title.trim();
