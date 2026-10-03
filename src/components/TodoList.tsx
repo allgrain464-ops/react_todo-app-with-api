@@ -1,4 +1,5 @@
 import React from 'react';
+import classNames from 'classnames';
 import { Todo } from '../types/Todo';
 import { TodoItem } from './TodoItem';
 
@@ -10,7 +11,7 @@ type Props = {
   updatingTodoIds: number[];
   onDelete: (todoId: number) => Promise<boolean>;
   onToggle: (todo: Todo) => void;
-  onUpdate: (todoId: number, title: string) => void;
+  onUpdate: (todo: Todo, title: string) => Promise<boolean>;
 };
 
 export const TodoList: React.FC<Props> = ({
@@ -23,16 +24,8 @@ export const TodoList: React.FC<Props> = ({
   onToggle,
   onUpdate,
 }) => {
-  if (isLoading) {
-    return (
-      <section className="todoapp__main">
-        <div data-cy="Loader" className="loader" />
-      </section>
-    );
-  }
-
   return (
-    <section className="todoapp__main">
+    <section className="todoapp__main" data-cy="TodoList">
       {todos.map(todo => (
         <TodoItem
           key={todo.id}
@@ -41,7 +34,9 @@ export const TodoList: React.FC<Props> = ({
             deletingTodoIds.includes(todo.id) ||
             updatingTodoIds.includes(todo.id)
           }
-          onDelete={() => onDelete(todo.id)}
+          onDelete={todoId => {
+            void onDelete(todoId);
+          }}
           onToggle={() => onToggle(todo)}
           onUpdate={onUpdate}
         />
@@ -49,12 +44,22 @@ export const TodoList: React.FC<Props> = ({
 
       {tempTodo && (
         <TodoItem
+          key={tempTodo.id}
           todo={tempTodo}
           isProcessed
-          onDelete={() => Promise.resolve(false)}
           onToggle={() => {}}
-          onUpdate={() => {}}
+          onUpdate={async () => false}
         />
+      )}
+
+      {isLoading && (
+        <div className="todoapp__main-loader">
+          <div
+            className={classNames('loader', {
+              'is-loading': isLoading,
+            })}
+          />
+        </div>
       )}
     </section>
   );
