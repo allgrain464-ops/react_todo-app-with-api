@@ -115,7 +115,7 @@ export const TodoItem: React.FC<Props> = ({
         completed: todo.completed,
       })}
     >
-      <div className="todo__status-label">
+      <label className="todo__status-label" htmlFor={statusId}>
         <input
           id={statusId}
           data-cy="TodoStatus"
@@ -130,7 +130,7 @@ export const TodoItem: React.FC<Props> = ({
             });
           }}
         />
-      </div>
+      </label>
 
       {isEditing ? (
         <form onSubmit={handleSubmit}>
